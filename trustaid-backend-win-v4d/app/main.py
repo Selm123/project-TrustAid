@@ -65,9 +65,11 @@ async def chat(req: ChatRequest):
         result = await sqls.answer(req.query, audit_id=audit_id, demo=DEMO_MODE)
     else:
         result = await rag.answer(req.query, audit_id=audit_id, locale=req.locale, jurisdiction=req.jurisdiction, demo=DEMO_MODE)
-        if result.get("confidence",{}).get("level") in {"low","none"}:
+        from app.services.router import looks_like_data_query
+
+        if result.get("confidence", {}).get("level") in {"low", "none"} and looks_like_data_query(req.query):
             tb = await sqls.answer(req.query, audit_id=audit_id, demo=DEMO_MODE)
-            if tb.get("confidence",{}).get("level") not in {"low","none"}:
+            if tb.get("confidence", {}).get("level") not in {"low", "none"}:
                 result = tb
 
     result.setdefault("audit_id", audit_id)
