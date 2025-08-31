@@ -85,21 +85,97 @@
 
 ## 🛠️ Architecture (high level)
 
-Frontend (React/Vite) – Chat widget + quick chips + “summary of steps”
-│
-POST /chat/query
-▼
-Backend (FastAPI, Python)
-• Intent & topic guardrails (life-event aware)
-• Retrieval over curated gov pages (Chroma; fallback TF-IDF)
-• Evidence-only synthesis → JSON (steps, links, citations, confidence, audit_id)
-• Optional read-only analytics (tables/charts + exact SQL)
-│
-▼
-UI renders structured JSON (no canned strings) with source links & “Learn more”
+```
+┌──────────────────────────────────────────────────────────────────────────────────────────┐
+│                                     TrustAid — Architecture                              │
+└──────────────────────────────────────────────────────────────────────────────────────────┘
 
-yaml
-Copy code
+SECTION A — Progressive Web App (device)
+────────────────────────────────────────────────────────────────────────────────────────────
+[ Service Worker ]
+    ├─ Offline caches (for low-connectivity zones)
+    │   • steps_cache  (summary of steps + links)
+    │   • services_cache (local offices/centres directories)
+    │   • ui_assets_cache
+    └─ Sync queue (retries POSTs when back online)
+
+[ Assistant Widget (UI) ]
+    ├─ Quick category chips: Benefits & support | Births, deaths, marriages | …
+    ├─ Conversation bubbles (plain English)
+    └─ “Would you like a quick summary of the steps?” → “Yes, tell me the steps”
+        ↓
+        POST /chat/query  (JSON: {query, locale, location?, consent_flags?})
+
+SECTION B — Backend API (FastAPI)
+────────────────────────────────────────────────────────────────────────────────────────────
+[ Intent & Topic Guardrails ]
+    ├─ Life-event detection (e.g., bereavement)
+    ├─ Safety filters (deny PII asks, out-of-scope topics)
+    └─ Routing hints (guidance vs analytics are handled inside one engine)
+
+[ Guidance & Analytics Engine (single pipeline) ]
+    ├─ Evidence Retriever
+    │     → Chroma (vector)  ⟵ embeddings (OpenAI; fallback TF-IDF)
+    │     → Dataset Registry (provenance: title/url/updated_at/jurisdiction)
+    ├─ Data Query Unit (read-only)
+    │     → SQL builder with allow-lists / column deny-lists (no PII joins)
+    │     → Read-only Warehouse (SQLite/DuckDB/Postgres)
+    ├─ Synthesiser (evidence-only generation)
+    │     • Produces JSON: steps + “Learn more” links OR tables/charts + exact SQL
+    │     • Adds confidence {level,score} and mode {openai|tfidf}
+    └─ Response Composer
+          • Merges evidence, analytics (if any), adds audit_id
+
+[ Audit & Telemetry ]
+    ├─ Per-request audit_id, sources/SQL, confidence, timings
+    └─ (Optional) event stream for product analytics (no PII)
+
+SECTION C — Data Layer (server)
+────────────────────────────────────────────────────────────────────────────────────────────
+[ Chroma (Vector DB) ]
+    • Curated snippets from official pages (title, url, updated_at, text)
+[ Read-only Warehouse ]
+    • Normalised public tables (CSV/API ingested)
+[ Dataset Registry / Metadata ]
+    • Provenance, refresh cadence, schema info
+[ Server Cache ]
+    • Hot answers, embeddings, SQL results (TTL)
+
+SECTION D — Ingestion & Refresh (ETL)
+────────────────────────────────────────────────────────────────────────────────────────────
+[ Fetchers / Schedulers ]
+    ├─ data.gov.au index
+    ├─ Transparency Portal
+    ├─ myGov Digital Services Performance
+    ├─ Digital Service Standard Compliance
+    ├─ AusTender Procurement Statistics
+    └─ AI Technical Standards Design Statements
+      ↓
+[ Clean/Normalise ]
+      ↓
+[ Upsert ]
+    ├─ Chroma (documents/snippets with metadata)
+    └─ Warehouse (tables/views)
+
+END-TO-END FLOW (example shown in mockups)
+────────────────────────────────────────────────────────────────────────────────────────────
+User types: “What to do when someone dies”
+  → UI posts /chat/query
+  → Backend applies life-event guardrail (bereavement)
+  → Evidence Retriever pulls gov pages (Services Australia, state BDM, etc.)
+  → Synthesiser creates numbered steps with “Learn more” links + confidence + audit_id
+  → Response Composer returns JSON
+  → UI renders empathy message → “Would you like a quick summary of the steps?” → numbered list
+  → Service Worker caches steps + links for offline reuse
+
+NOTES
+────────────────────────────────────────────────────────────────────────────────────────────
+• Single pipeline inside the backend: it handles both guidance and analytics, but always
+  returns structured JSON with citations/SQL, confidence, and audit_id.
+• All analytics are read-only; no PII joins; strict allow-lists.
+• PWA caches are designed to keep essential guidance usable in low-connectivity areas.
+
+```
 
 ---
 
@@ -115,18 +191,21 @@ RAG_BACKEND=openai
 ANONYMIZED_TELEMETRY=false
 
 uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
-Health & mode:
+```
 
-bash
+### Health & mode:
+```bash
 Copy code
 curl http://localhost:8000/health
 curl http://localhost:8000/debug/rag   # {"mode":"openai"} or {"mode":"tfidf"}
-Frontend
+```
+
+### Frontend
 Set API Base URL to your backend, then run the web client.
 
 The chat widget renders: welcome → category chips → user input → summary prompt → numbered steps with Learn more and source links.
 
-🧪 Evaluation (what we’ll demo)
+### 🧪 Evaluation 
 Real flows that match the mockups (e.g., Death and bereavement).
 
 Citations visible in every answer; summary-then-details pattern.
