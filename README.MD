@@ -94,28 +94,30 @@ ANONYMIZED_TELEMETRY=false
 
 # run
 uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
-Health & mode:
 ```
 
-bash
+### Health & mode:
+```bash
 Copy code
 curl http://localhost:8000/health
 curl http://localhost:8000/debug/rag   # {"mode":"openai"} or {"mode":"tfidf"}
-Ask:
+```
 
-bash
+### Ask:
+```bash
 Copy code
 curl -X POST http://localhost:8000/chat/query \
   -H "Content-Type: application/json" \
   -d '{"query":"Am I eligible for Carer Allowance?","force_kind":"navigator"}'
 Frontend
 Configure API Base URL = your backend (e.g., http://localhost:8000).
+```
 
 UI renders answer, steps, citations or table/chart/sql directly from backend JSON (no canned strings).
 
-🔌 API (contract)
+### 🔌 API (contract)
 POST /chat/query
-
+```
 json
 Copy code
 {
@@ -149,7 +151,9 @@ Copy code
   "confidence": {"level":"exact","score":1.0},
   "audit_id": "a91bd..."
 }
-🛠️ Roadmap
+```
+
+### 🛠️ Roadmap
 Automated ingest pipelines for state/territory portals; geo-enrichment at ingest.
 
 Multilingual & voice flows; SMS hand-offs; accessibility polish.
