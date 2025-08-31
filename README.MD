@@ -3,7 +3,7 @@
 
 > TrustAid is an evidence-first assistant that guides people through government services with step-by-step actions, official links, and verifiable analytics. The UI you see in the mockups is included below as the product experience we ship.
 
-![Alt text](image-url "TrustAid.png")
+![screenshot](https://github.com/Selm123/project-TrustAid/blob/main/TrustAid.png)
 
 ---
 
