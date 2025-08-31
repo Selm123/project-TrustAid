@@ -1,83 +1,105 @@
 # TrustAid
-**Evidence-first assistant to navigate services, interrogate data, and explain AI—built for government users.**
+**The simple way to find the support you need — accurate, transparent, and easy to navigate.**
 
-> One line: **TrustAid turns opaque AI into verifiable, actionable guidance** with citations, read-only analytics, and full auditability—built for life-event scenarios and cross-agency journeys.
-
----
-
-## ✨ Why TrustAid (at a glance)
-- **Life-event guidance, not chit-chat.** Detects scenarios (bereavement, becoming a carer, new baby, disaster recovery) and returns **clear, step-by-step actions** with official links.
-- **Analytics you can trust.** Natural-language → **whitelisted NL→SQL** over **read-only** government datasets; returns **the exact SQL** and dataset metadata.
-- **Transparent by default.** Citations & timestamps, **confidence scores**, `audit_id`, and model mode (`openai` or fallback `tfidf`). **Refuses** when evidence is thin.
-- **Agentic completion (opt-in).** Book assessments, generate checklists, schedule reminders—designed for low digital literacy and mobile users.
-- **Inclusive & safe.** Topic guardrails (e.g., bereavement), multilingual-ready, printable outputs, rate-limited APIs, no PII joins.
+> TrustAid is an evidence-first assistant that guides people through government services with step-by-step actions, official links, and verifiable analytics. The UI you see in the mockups is included below as the product experience we ship.
 
 ---
 
-## 🧠 What makes it different
-- **Evidence > opinion.** Answers must be grounded in authoritative sources (links + last updated). No source → no answer.
-- **Two pipelines, one assistant.**
-  - **Navigator (RAG):** policy/process/eligibility → vector retrieval over curated gov pages → LLM synthesises steps **using only evidence**.
-  - **TrustBot (SQL):** analytics/metrics → schema-aware, allow-listed NL→SQL → read-only DB → tables/charts + **exact SQL**.
-- **Guardrails that matter.** Topic filters (e.g., *bereavement* suppresses irrelevant home-care suggestions), similarity thresholds, SQL allow-lists, refusal logic.
-- **Auditable & reproducible.** Each reply includes `audit_id`, confidence `{level,score}`, provenance (citations/SQL) and model mode, enabling replay and oversight.
+## 💡 What TrustAid does (as shown in the mockups)
+
+**Personalised guidance**
+- The assistant opens with **plain-English prompts** and quick-reply chips (e.g., *Benefits & support*, *Births, deaths, marriages*, *Community & events*, *Travel & transport*, *Home & land*, *Business*).
+- It recognises **life events** and offers a **summary of steps** before deep diving.
+
+**Life-event support (example: bereavement)**
+- User: *“What to do when someone dies”*  
+- Assistant replies with:
+  - An empathetic opener.
+  - **Official links** (e.g., Services Australia; Service NSW).
+  - A follow-up prompt: *“Would you like me to summarise the steps?”*
+- On *“Yes, tell me the steps”* ➜ The assistant shows a **numbered list** with expandable “**Learn more**” items:
+  1. Register the death  
+  2. Organise the funeral  
+  3. Notify people and organisations  
+  *(…and more as available in the evidence)*
+
+**Local connections**
+- For eligible topics, TrustAid can suggest **nearby services** (e.g., registries, centres, clinics) and provide contact links.
+
+**Plain-English explanations**
+- Every answer is short, scannable, and **linked to sources** so users can verify quickly.
+
+**Accurate results**
+- TrustAid cites what it uses. When it can’t verify something, it **says so** and proposes the safest next step instead of guessing.
+
+**Secure and in your control**
+- Read-only analytics, no PII joins, and transparent provenance (citations, timestamps, confidence, `audit_id`).
 
 ---
 
-## ⚙️ How it works (end-to-end)
-1. **User asks** a question in the frontend (mobile-first, accessible patterns).
-2. **Router** detects intent and applies **topic guardrails** (e.g., bereavement).
-3. **Navigator (RAG)** retrieves top-k snippets from **Chroma** (OpenAI embeddings; auto-fallback **TF-IDF**) and the LLM composes a JSON answer constrained to the evidence.
-4. **TrustBot (SQL)** turns plain English into **safe SQL** (schema allow-list + column deny-list + no PII joins) and queries a **read-only** store (SQLite/DuckDB/Postgres).
-5. **Response Mux** merges results (if both ran), attaches `audit_id`, confidence, and returns structured JSON for the UI to render.
+## 🖼️ UX components (from the mockups)
 
-### ASCII Architecture
-Frontend (React/Vite) ── POST /chat/query ─▶ FastAPI Backend
-┌──▶ Router & Topic Guardrails
-┌──────── Navigator (RAG) ──┤
-│ └──▶ TrustBot (SQL)
-│ retrieve ┌───────────────┐ ┌─ NL→SQL + Allow-list
-└──────────▶│ Chroma (Vec) │──▶ DB (read-only: SQLite/DuckDB/Postgres)
-└───────────────┘
-▲ ▲
-│ OpenAI Embeddings │ rows/agg
-▼ │
-OpenAI Chat ◀──────────────┘
+- **Hero page**  
+  - Title: *Access government services made easy*  
+  - Secondary tagline: *The simple way to find the support you need*  
+  - Feature cards:  
+    - Personalised guidance  
+    - Life event support  
+    - Local connections  
+    - Plain English explanations  
+    - Accurate results  
+    - Secure and control
 
-Response Mux → { kind, answer, steps/citations | table/chart/sql, confidence, audit_id, mode }
-Logging/Audit → per-request trace
+- **Assistant widget (floating panel)**  
+  - Greeting bubble + **quick category chips**.  
+  - User message area with **send** button.  
+  - **Summary prompt** pattern (*“Would you like a quick summary of the steps?”* ➜ *“Yes, tell me the steps”*).  
+  - **Numbered list** + “**Learn more**” toggles for each step.  
+  - **Source links** appear as blue text with an external icon.
+
+- **Action bar icons**  
+  - Small, rounded controls for cancel / confirm / open assistant (as in mockups).
+
+---
+
+## 🔍 How it stays trustworthy
+- **Evidence-only generation**: answers are composed from retrieved official snippets; UI always shows **citations** and **timestamps**.  
+- **Guardrails**: life-event filters (e.g., bereavement) keep the advice on-topic (e.g., *register death*, *funeral arrangements*, *notify agencies*), **never** irrelevant suggestions.  
+- **Read-only analytics**: when analytics are shown, TrustAid returns **tables/charts with the exact SQL** and dataset metadata.  
+- **Confidence & audit**: each reply contains a **confidence score** and an **`audit_id`** to reproduce the result.
+
+---
+
+## 🧩 Data we include (curated from Australian public sources)
+
+- **Government Data Portal (data.gov.au)** — master index for discovery and refresh; TrustAid links back to each dataset’s page.  
+- **Australian Government Transparency Portal** — entity financial/performance reports; used to add program context and cite accountability.  
+- **myGov Digital Services Performance** — availability and usage; TrustAid can signal degraded services and suggest alternatives.  
+- **Digital Service Standard Compliance** — badges compliant services and explains routing choices.  
+- **AusTender Procurement Statistics** — supports read-only analytics (outliers, vendor trends) with exact SQL shown.  
+- **AI Technical Standards Design Statements (All)** — underpins explainability text, refusal templates, and UI transparency badges.
+
+> Optional local enrichments: state/territory BDM pages, NHSD/ACSL service directories, ACNC charities, ABS geographies/SEIFA for equitable suggestions.
+
+---
+
+## 🛠️ Architecture (high level)
+
+Frontend (React/Vite) – Chat widget + quick chips + “summary of steps”
+│
+POST /chat/query
+▼
+Backend (FastAPI, Python)
+• Intent & topic guardrails (life-event aware)
+• Retrieval over curated gov pages (Chroma; fallback TF-IDF)
+• Evidence-only synthesis → JSON (steps, links, citations, confidence, audit_id)
+• Optional read-only analytics (tables/charts + exact SQL)
+│
+▼
+UI renders structured JSON (no canned strings) with source links & “Learn more”
 
 yaml
 Copy code
-
----
-
-## 📚 Government data (demo-ready seeds)
-- **Services Australia** curated snippets (e.g., *When someone dies*, *Carer support*).
-- **NHSD** (National Health Services Directory; API key), **ACSL** (Aged Care Service List).  
-- **ABS** geographies (ASGS) & SEIFA for regional mapping and inclusivity logic.
-- **ACNC** charity register (community & grief support).  
-- **AusTender** procurement statistics; Portfolio Budget Statements; APS Employee Census.  
-- **State/Territory portals**: BDM registration info, service-centre and health-facility locations (CSV/GeoJSON).
-
-> Demo includes small sample tables (`procurement_payments`, `hr_leave`) and curated documents; production can ingest the real sources above.
-
----
-
-## 🔒 Ethics, safety, compliance
-- **Read-only analytics**; no side-effects; no PII joins; schema allow-lists & column deny-lists.
-- **Transparent provenance**: citations/SQL, confidence, `audit_id`, model mode, refusal on uncertainty.
-- **Topic guardrails**: e.g., bereavement answers focus on death registration/ADNS/Services Australia notifications—**never** on home-care packages.
-- **Minimal retention**: optional agentic actions (reminders/exports) only with explicit consent.
-- **Aligned with public-sector AI principles**: transparency, accountability, safety, human oversight.
-
----
-
-## 🧪 Evaluation plan
-- **Golden-QA** across common tasks (bereavement, carer, aged care, tax, procurement outliers).  
-- **Metrics**: EM/F1, citation correctness, refusal correctness, SQL accuracy, task completion.  
-- **Progressive answering**: multi-pass consistency; **fallback** from OpenAI to TF-IDF with provenance intact.  
-- **Audit replay**: use `audit_id` to reproduce sources, SQL, and outputs.
 
 ---
 
@@ -92,72 +114,28 @@ OPENAI_EMBED_MODEL=text-embedding-3-small
 RAG_BACKEND=openai
 ANONYMIZED_TELEMETRY=false
 
-# run
 uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
-```
+Health & mode:
 
-### Health & mode:
-```bash
+bash
 Copy code
 curl http://localhost:8000/health
 curl http://localhost:8000/debug/rag   # {"mode":"openai"} or {"mode":"tfidf"}
-```
-
-### Ask:
-```bash
-Copy code
-curl -X POST http://localhost:8000/chat/query \
-  -H "Content-Type: application/json" \
-  -d '{"query":"Am I eligible for Carer Allowance?","force_kind":"navigator"}'
 Frontend
-Configure API Base URL = your backend (e.g., http://localhost:8000).
-```
+Set API Base URL to your backend, then run the web client.
 
-UI renders answer, steps, citations or table/chart/sql directly from backend JSON (no canned strings).
+The chat widget renders: welcome → category chips → user input → summary prompt → numbered steps with Learn more and source links.
 
-### 🔌 API (contract)
-POST /chat/query
-```
-json
-Copy code
-{
-  "query": "How do I register a death in NSW?",
-  "force_kind": "navigator" // optional: "navigator" | "trustbot"
-}
-Response (Navigator)
+🧪 Evaluation (what we’ll demo)
+Real flows that match the mockups (e.g., Death and bereavement).
 
-json
-Copy code
-{
-  "kind": "navigator",
-  "answer": "Here are the steps...",
-  "steps": [{"title":"Notify Services Australia","link":"..."}, ...],
-  "citations": [{"title":"When someone dies","url":"..."}],
-  "confidence": {"level":"high","score":0.87},
-  "audit_id": "e5mv5g...",
-  "mode": "openai"
-}
-Response (TrustBot)
+Citations visible in every answer; summary-then-details pattern.
 
-json
-Copy code
-{
-  "kind": "trustbot",
-  "answer": "Top vendor payments last quarter...",
-  "table": {"columns":["vendor","amount","date"],"rows":[...]},
-  "chart": {"type":"bar","x":"vendor","y":"amount"},
-  "sql": "SELECT ...",
-  "dataset": {"name":"AusTender","period":"2023-07-01..2024-06-30"},
-  "confidence": {"level":"exact","score":1.0},
-  "audit_id": "a91bd..."
-}
-```
+If evidence is thin, TrustAid refuses gracefully and links the best official source.
 
-### 🛠️ Roadmap
-Automated ingest pipelines for state/territory portals; geo-enrichment at ingest.
+For analytics prompts, we show exact SQL and dataset metadata with the chart/table.
 
-Multilingual & voice flows; SMS hand-offs; accessibility polish.
+📄 License
+MIT © 2025 TrustAid Team
 
-Local council plugins (custom policies/datasets) without core changes.
-
-Caching, quotas, and observability dashboards for production.
+Design note: the yellow accent, rounded chips, and the “summary of steps” pattern are intentional to keep the experience friendly, fast, and verifiable.
